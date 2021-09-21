@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+backbone.egg-info/PKG-INFO
+backbone.egg-info/SOURCES.txt
+backbone.egg-info/dependency_links.txt
+backbone.egg-info/requires.txt
+backbone.egg-info/top_level.txt
