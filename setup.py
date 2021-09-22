@@ -10,6 +10,7 @@ setup(name='backbone',
       install_requires=[
           'jupyterlab',
           'pandas',
-          'numpy'
+          'numpy',
+          'matplotlib'
       ]
       )
