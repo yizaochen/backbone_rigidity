@@ -5,8 +5,8 @@ from backbone.trajectory import TrajectoryProcess
 from backbone.na_seq import sequences
 from backbone.miscell import check_dir_exist_and_make
 
-class DihedralMaker(TrajectoryProcess):
-    d_dihedral_pair = {
+class DihedralPair:
+    d_pair = {
         "C2prime-P": [('i', "C2'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
         'C4prime-P': [('i', "C4'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
         'C1prime-N3orO2': {
@@ -32,8 +32,22 @@ class DihedralMaker(TrajectoryProcess):
             'T': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")],
             'G': [('i', "C2'"), ('i', "C1'"), ('i', "N9"), ('i', "C4")],
             'C': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")]
+        },
+        'O4prime-C8orC6': {
+            'A': [('i', "O4'"), ('i', "C1'"), ('i', "N9"), ('i', "C8")],
+            'T': [('i', "O4'"), ('i', "C1'"), ('i', "N1"), ('i', "C6")],
+            'G': [('i', "O4'"), ('i', "C1'"), ('i', "N9"), ('i', "C8")],
+            'C': [('i', "O4'"), ('i', "C1'"), ('i', "N1"), ('i', "C6")]
+        },
+        'C2prime-C8orC6': {
+            'A': [('i', "C2'"), ('i', "C1'"), ('i', "N9"), ('i', "C8")],
+            'T': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C6")],
+            'G': [('i', "C2'"), ('i', "C1'"), ('i', "N9"), ('i', "C8")],
+            'C': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C6")]
         }
     }
+
+class DihedralMaker(TrajectoryProcess):
     d_resid_lst = {'STRAND1': list(range(4, 19)), 'STRAND2': list(range(25, 40))}
 
     def __init__(self, host, strand_id, big_traj_folder, backbone_data_folder):
@@ -80,7 +94,7 @@ class DihedralMaker(TrajectoryProcess):
 
     def get_indices_by_resid_dihedral_name(self, resid, dihedral_name):
         atom_lst = list()
-        for resid_symbol, atomname in self.d_dihedral_pair[dihedral_name]:
+        for resid_symbol, atomname in DihedralPair.d_pair[dihedral_name]:
             if resid_symbol == 'i':
                 atom_lst.append(self.d_atom_container[(resid, atomname)])
             else:
@@ -110,7 +124,7 @@ class DihedralMaker(TrajectoryProcess):
 
     def get_indices_by_resid_dihedral_name_with_resname(self, resid, dihedral_name, resname):
         atom_lst = list()
-        for resid_symbol, atomname in self.d_dihedral_pair[dihedral_name][resname]:
+        for resid_symbol, atomname in DihedralPair.d_pair[dihedral_name][resname]:
             if resid_symbol == 'i':
                 atom_lst.append(self.d_atom_container[(resid, atomname)])
             else:
