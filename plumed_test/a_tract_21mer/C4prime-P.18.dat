@@ -1,0 +1,2 @@
+phi1: TORSION ATOMS=550,569,574,575
+PRINT ARG=phi1 FILE=/home/yizaochen/codes/backbone_rigidity/plumed_test/a_tract_21mer/C4prime-P.18.out STRIDE=1

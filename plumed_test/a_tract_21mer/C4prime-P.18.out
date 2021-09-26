@@ -1,0 +1,4 @@
+#! FIELDS time phi1
+#! SET min_phi1 -pi
+#! SET max_phi1 pi
+ 0.000000 3.126264

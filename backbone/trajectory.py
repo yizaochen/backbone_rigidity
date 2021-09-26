@@ -13,8 +13,9 @@ class TrajectoryProcess:
         self.big_traj_folder = big_traj_folder
         self.backbone_data_folder = backbone_data_folder
 
-        self.all_folder = path.join(self.big_traj_folder, self.host, self.type_na, 'input', 'allatoms')
+        self.all_folder = path.join('/home/yizaochen/codes/dna_rna/all_systems', self.host, self.type_na, 'input', 'allatoms')
         self.all_gro = path.join(self.all_folder, f'{self.type_na}.npt4.all.gro')
+        self.all_pdb = path.join(self.all_folder, f'{self.type_na}.npt4.all.pdb')
         self.all_xtc = path.join(self.all_folder, f'{self.type_na}.all.xtc')
 
         self.host_folder = path.join(self.backbone_data_folder, self.host)

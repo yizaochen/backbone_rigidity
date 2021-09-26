@@ -1,0 +1,51 @@
+zap
+load nmrpdb hel_regions.pdb
+# load /home/yizaochen/codes/dna_rna/all_systems/a_tract_21mer/bdna+bdna/input/allatoms/bdna+bdna.npt4.all.pdb
+# restrict not (protein or water)
+
+
+#------Helix #1, color: red------
+select 1: , 42: 
+color red
+select 2: , 41: 
+color red
+select 3: , 40: 
+color red
+select 4: , 39: 
+color red
+select 5: , 38: 
+color red
+select 6: , 37: 
+color red
+select 7: , 36: 
+color red
+select 8: , 35: 
+color red
+select 9: , 34: 
+color red
+select 10: , 33: 
+color red
+select 11: , 32: 
+color red
+select 12: , 31: 
+color red
+select 13: , 30: 
+color red
+select 14: , 29: 
+color red
+select 15: , 28: 
+color red
+select 16: , 27: 
+color red
+select 17: , 26: 
+color red
+select 18: , 25: 
+color red
+select 19: , 24: 
+color red
+select 20: , 23: 
+color red
+select 21: , 22: 
+color red
+
+select all
