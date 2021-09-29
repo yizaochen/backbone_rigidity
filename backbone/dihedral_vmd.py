@@ -1,37 +1,10 @@
 from os import path
 import MDAnalysis as mda
 from backbone.na_seq import sequences
+from backbone.dihedral import DihedralPair
 
 class DihedralDrawer:
     type_na = 'bdna+bdna'
-    d_dihedral_pair = {
-        "C2prime-P": [('i', "C2'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
-        'C4prime-P': [('i', "C4'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
-        'C1prime-N3orO2': {
-            'A': [('i', "C1'"), ('i', "N9"), ('i', "C4"), ('i', 'N3')],
-            'T': [('i', "C1'"), ('i', "N1"), ('i', "C2"), ('i', 'O2')],
-            'G': [('i', "C1'"), ('i', "N9"), ('i', "C4"), ('i', 'N3')],
-            'C': [('i', "C1'"), ('i', "N1"), ('i', "C2"), ('i', 'O2')]
-        },
-        'C1prime-N7orC5': {
-            'A': [('i', "C1'"), ('i', "N9"), ('i', "C8"), ('i', 'N7')],
-            'T': [('i', "C1'"), ('i', "N1"), ('i', "C6"), ('i', 'C5')],
-            'G': [('i', "C1'"), ('i', "N9"), ('i', "C8"), ('i', 'N7')],
-            'C': [('i', "C1'"), ('i', "N1"), ('i', "C6"), ('i', 'C5')]
-        },
-        'O4prime-C4orC2': {
-            'A': [('i', "O4'"), ('i', "C1'"), ('i', "N9"), ('i', "C4")],
-            'T': [('i', "O4'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")],
-            'G': [('i', "O4'"), ('i', "C1'"), ('i', "N9"), ('i', "C4")],
-            'C': [('i', "O4'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")]
-        },
-        'C2prime-C4orC2': {
-            'A': [('i', "C2'"), ('i', "C1'"), ('i', "N9"), ('i', "C4")],
-            'T': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")],
-            'G': [('i', "C2'"), ('i', "C1'"), ('i', "N9"), ('i', "C4")],
-            'C': [('i', "C2'"), ('i', "C1'"), ('i', "N1"), ('i', "C2")]
-        }
-    }
 
     def __init__(self, host, strand_id, all_folder, tcl_folder):
         self.host = host
@@ -65,12 +38,12 @@ class DihedralDrawer:
 
     def draw_two_triangles(self, dihedral_name, material):
         txt_lst = list()
-        if dihedral_name in ["C2prime-P", 'C4prime-P']:
-            txt_lst += self.get_triangle_txt_lst('magenta', self.d_dihedral_pair[dihedral_name][:3], material)
-            txt_lst += self.get_triangle_txt_lst('orange', self.d_dihedral_pair[dihedral_name][1:], material)
+        if dihedral_name in ["C2prime-P", 'C4prime-P', "O4prime-O5prime"]:
+            txt_lst += self.get_triangle_txt_lst('magenta', DihedralPair.d_pair[dihedral_name][:3], material)
+            txt_lst += self.get_triangle_txt_lst('orange', DihedralPair.d_pair[dihedral_name][1:], material)
         else:
-            txt_lst += self.get_triangle_txt_lst('magenta', self.d_dihedral_pair[dihedral_name][self.resname_i][:3], material)
-            txt_lst += self.get_triangle_txt_lst('orange', self.d_dihedral_pair[dihedral_name][self.resname_i][1:], material)
+            txt_lst += self.get_triangle_txt_lst('magenta', DihedralPair.d_pair[dihedral_name][self.resname_i][:3], material)
+            txt_lst += self.get_triangle_txt_lst('orange', DihedralPair.d_pair[dihedral_name][self.resname_i][1:], material)
         f_tcl = path.join(self.tcl_folder, 'draw_triangle.tcl')
         self.write_tcl(f_tcl, txt_lst)
 
@@ -87,10 +60,10 @@ class DihedralDrawer:
 
     def get_selection_txt_by_dihedral_name(self, dihedral_name):
         txt_1 = 'mol selection '
-        if dihedral_name in ["C2prime-P", 'C4prime-P']:
-            txt_2 = ' or '.join([self.get_txt(pair) for pair in self.d_dihedral_pair[dihedral_name]])
+        if dihedral_name in ["C2prime-P", 'C4prime-P', "O4prime-O5prime"]:
+            txt_2 = ' or '.join([self.get_txt(pair) for pair in DihedralPair.d_pair[dihedral_name]])
         else:
-            txt_2 = ' or '.join([self.get_txt(pair) for pair in self.d_dihedral_pair[dihedral_name][self.resname_i]])
+            txt_2 = ' or '.join([self.get_txt(pair) for pair in DihedralPair.d_pair[dihedral_name][self.resname_i]])
         return txt_1 + txt_2
 
     def get_txt(self, pair):

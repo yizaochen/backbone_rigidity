@@ -10,6 +10,7 @@ class DihedralPair:
         "C2prime-P": [('i', "C2'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
         'C4prime-P': [('i', "C4'"), ('i', "C3'"), ('i', "O3'"), ('i+1', 'P')],
         "C3prime-O5prime":[('i', "C3'"), ('i', "O3'"), ('i+1', 'P'), ('i+1', "O5'")],
+        "O4prime-O5prime":[('i', "O4'"), ('i', "C4'"), ('i', "C5'"), ('i', "O5'")],
         'C1prime-N3orO2': {
             'A': [('i', "C1'"), ('i', "N9"), ('i', "C4"), ('i', 'N3')],
             'T': [('i', "C1'"), ('i', "N1"), ('i', "C2"), ('i', 'O2')],
@@ -162,7 +163,7 @@ class DihedralMaker(TrajectoryProcess):
             return self.d_seq[self.strand_id][resid_modify-1]
 
 class DihedralReader(DihedralMaker):
-    dihedral_lst = ["C2prime-P", 'C4prime-P', "C3prime-O5prime", 'C1prime-N3orO2', 'C1prime-N7orC5', 'O4prime-C4orC2', 'C2prime-C4orC2', 'O4prime-C8orC6', 'C2prime-C8orC6']
+    dihedral_lst = ["C2prime-P", 'C4prime-P', "C3prime-O5prime", "O4prime-O5prime", 'C1prime-N3orO2', 'C1prime-N7orC5', 'O4prime-C4orC2', 'C2prime-C4orC2', 'O4prime-C8orC6', 'C2prime-C8orC6']
 
     def __init__(self, host, strand_id, big_traj_folder, backbone_data_folder):
         super().__init__(host, strand_id, big_traj_folder, backbone_data_folder)

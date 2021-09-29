@@ -3,10 +3,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.colors import Normalize
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colorbar import ColorbarBase
+from matplotlib import cm
 from enmspring.graphs_bigtraj import BackboneMeanModeAgent
 from enmspring.kappa_mat import KMat
 from enmspring.backbone_k import BackboneResidPlot, BackboneResidPlotWithNext
 from backbone.dihedral import DihedralReader
+from backbone.na_seq import sequences
 
 class DPair:
     d_pairs = {
@@ -22,12 +27,36 @@ class DPair:
         'G': {'atomname_i': "C2'", 'atomname_j': "O1P"},
         'C': {'atomname_i': "C2'", 'atomname_j': "O1P"}
         },
+    "C3'(i)-O2P(i+1)": {
+        'A': {'atomname_i': "C3'", 'atomname_j': "O2P"},
+        'T': {'atomname_i': "C3'", 'atomname_j': "O2P"},
+        'G': {'atomname_i': "C3'", 'atomname_j': "O2P"},
+        'C': {'atomname_i': "C3'", 'atomname_j': "O2P"}
+        },
     "C4'(i)-O5'(i+1)": {
         'A': {'atomname_i': "C4'", 'atomname_j': "O5'"},
         'T': {'atomname_i': "C4'", 'atomname_j': "O5'"},
         'G': {'atomname_i': "C4'", 'atomname_j': "O5'"},
         'C': {'atomname_i': "C4'", 'atomname_j': "O5'"}
-        }
+        },
+    "C1'-N3/C1'-O2": {
+        'A': {'atomname_i': "C1'", 'atomname_j': "N3"},
+        'T': {'atomname_i': "C1'", 'atomname_j': "O2"},
+        'G': {'atomname_i': "C1'", 'atomname_j': "N3"},
+        'C': {'atomname_i': "C1'", 'atomname_j': "O2"}
+    }, 
+    "C2'-C8/C2'-C6": {
+        'A': {'atomname_i': "C2'", 'atomname_j': "C8"},
+        'T': {'atomname_i': "C2'", 'atomname_j': "C6"},
+        'G': {'atomname_i': "C2'", 'atomname_j': "C8"},
+        'C': {'atomname_i': "C2'", 'atomname_j': "C6"}
+    },
+    "O4'-O5'": {
+        'A': {'atomname_i': "O4'", 'atomname_j': "O5'"},
+        'T': {'atomname_i': "O4'", 'atomname_j': "O5'"},
+        'G': {'atomname_i': "O4'", 'atomname_j': "O5'"},
+        'C': {'atomname_i': "O4'", 'atomname_j': "O5'"}
+    }
     }
 
 class MixPlot1:
@@ -35,8 +64,7 @@ class MixPlot1:
     resid_lst = list(range(4, 19))
     lbfz = 12
     lgfz = 12
-    k_labels = ["C2'(i)-P(i+1)", "C2'(i)-O1P(i+1)", "C4'(i)-O5'(i+1)"]
-    dihedral_lst = ["C2'-C3'-O3'-P", "epsilon", "zeta"]
+    k_labels = ["C2'(i)-P(i+1)", "C3'(i)-O2P(i+1)", "C2'(i)-O1P(i+1)"]
     dihedral_ylabels = ["C2'-C3'-O3'-P", r"$\epsilon$", r"$\zeta$"]
     dihedral_name_lst = ["C2prime-P", "C4prime-P", "C3prime-O5prime"]
 
@@ -49,7 +77,6 @@ class MixPlot1:
         self.make_df = make_df
         self.nrows = self.set_n_rows()
         self.n_resid = len(self.resid_lst)
-        self.cmap = 'Reds'
 
         self.s_agent = None
         self.kmat_agent = None
@@ -66,7 +93,7 @@ class MixPlot1:
         if self.make_df:
             self.ini_big_k_mat()
 
-        self.f_df = path.join(self.dihedral_folder, f'{self.host}_{self.strand_id}_k_resid_with_next.csv')
+        self.f_df = self.set_f_df()
         self.df_k = None
 
         self.d_reader = None
@@ -75,6 +102,7 @@ class MixPlot1:
         self.d_dihedral_df = None
 
         self.epsilon_minus_zeta_df = None
+        self.d_seq = {'STRAND1': sequences[host]['guide'], 'STRAND2': sequences[host]['target']}
 
     def plot_main(self, figsize, hspace, bottom, top):
         fig = plt.figure(figsize=figsize, facecolor='white')
@@ -84,9 +112,12 @@ class MixPlot1:
         self.set_ylabels(d_axes)
         for idx in range(3):
             self.plot_k(d_axes, idx)
+            self.set_k_ylim(d_axes, idx)
         for idx in range(3, 6):
             self.heatmap(d_axes, idx, bottom, top)
             self.set_yticks_for_dihedral(d_axes[idx], top, bottom)
+        self.add_resid_lines(d_axes)
+        self.set_xlim_the_same(d_axes)
         return fig, d_axes
 
     def plot_k(self, d_axes, idx):
@@ -99,11 +130,51 @@ class MixPlot1:
     def heatmap(self, d_axes, idx, bottom, top):
         dihedral_name = self.dihedral_name_lst[idx-3]
         data_mat = self.assemble_data_mat(self.d_dihedral_df[dihedral_name])
-        d_axes[idx].imshow(data_mat, cmap=self.cmap, origin='lower', extent=self.get_extent(bottom, top))
+        norm, cmap = self.get_norm_cmap(dihedral_name)
+        d_axes[idx].imshow(data_mat, norm=norm, cmap=cmap, origin='lower', extent=self.get_extent(bottom, top))
         d_axes[idx].set_yticks([bottom, top])
+
+    def get_norm_cmap(self, dihedral_name):
+        # "C2prime-P", "C4prime-P", "C3prime-O5prime"
+        min_max = {"C2prime-P": (0, 0.035), "C4prime-P": (0, 0.035), "C3prime-O5prime": (0, 0.035),
+                   "epsilon-zeta": (0, 0.025), "O4prime-O5prime": (0, 0.042), "C2prime-C8orC6": (0, 0.039), 
+                   "O4prime-C8orC6": (0, 0.036)}
+        CMAP = LinearSegmentedColormap.from_list('mycmap', ['white','red'])
+        norm = Normalize(vmin=min_max[dihedral_name][0], vmax=min_max[dihedral_name][1])
+        cmap = cm.get_cmap(CMAP)
+        return norm, cmap
+
+    def draw_color_bar(self, figsize, dihedral_name):
+        fig = plt.figure(figsize=figsize)
+        ax1 = fig.add_axes([0.05, 0.80, 0.9, 0.15])
+        norm, cmap = self.get_norm_cmap(dihedral_name)
+        cb1 = ColorbarBase(ax1, cmap=cmap, norm=norm, orientation='horizontal')
+        return fig, ax1, cb1
 
     def set_n_rows(self):
         return 6
+
+    def set_f_df(self):
+        return path.join(self.dihedral_folder, f'{self.host}_{self.strand_id}_k_resid_with_next.csv')
+
+    def set_k_ylim(self, d_axes, idx):
+        d_ylim = {"C2'(i)-P(i+1)": (1.285, 9.921), "C3'(i)-O2P(i+1)": (0, 11.2), "C2'(i)-O1P(i+1)": (0, 9.223), "C4'(i)-O5'(i+1)": (0.634, 6.763)}
+        label = self.k_labels[idx]
+        d_axes[idx].set_ylim(d_ylim[label])
+        d_hlines = {"C2'(i)-P(i+1)": np.arange(2, 8.1, 2),  "C3'(i)-O2P(i+1)": np.arange(2.5, 10.1, 2.5), "C2'(i)-O1P(i+1)": np.arange(2, 8.1, 2), 
+                    "C4'(i)-O5'(i+1)": np.arange(2, 6.1, 2)}
+        for hline in d_hlines[label]:
+            d_axes[idx].axhline(hline, color='grey', alpha=0.1)
+
+    def add_resid_lines(self, d_axes):
+        for idx in range(self.nrows):
+            for resid in self.resid_lst:
+                d_axes[idx].axvline(resid, color='grey', alpha=0.3, linestyle='--')
+    
+    def set_xlim_the_same(self, d_axes):
+        xlim = d_axes[3].get_xlim()
+        for idx in range(self.nrows):
+            d_axes[idx].set_xlim(xlim)
 
     def make_k_df(self):
         d_result = dict()
@@ -220,6 +291,9 @@ class MixPlot1:
         ax.set_xticks(self.resid_lst)
         ax.set_xlabel('Resid', fontsize=self.lbfz)
         ax.set_xlim(3.5, 18.5)
+        seq = self.d_seq[self.strand_id]
+        xticklabels = [seq[resid-1] for resid in self.resid_lst]
+        ax.set_xticklabels(xticklabels)
 
     def set_ylabels(self, d_axes):
         for idx in range(3):
@@ -265,17 +339,21 @@ class MixPlot2(MixPlot1):
         self.set_ylabels(d_axes)
         for idx in range(3):
             self.plot_k(d_axes, idx)
+            self.set_k_ylim(d_axes, idx)
         idx += 1
         self.heatmap(d_axes, idx, bottom, top) # C2'-C3'-O3'-P
         self.set_yticks_for_dihedral(d_axes[idx], top, bottom)
         idx += 1
         self.heatmap_epsilon_minus_zeta(d_axes, idx, bottom, top)
         self.set_yticks_for_epsilon_minus_zeta(d_axes[idx], top, bottom)
+        self.add_resid_lines(d_axes)
+        self.set_xlim_the_same(d_axes)
         return fig, d_axes
 
     def heatmap_epsilon_minus_zeta(self, d_axes, idx, bottom, top):
         data_mat = self.assemble_data_mat(self.epsilon_minus_zeta_df)
-        d_axes[idx].imshow(data_mat, cmap=self.cmap, origin='lower', extent=self.get_extent(bottom, top))
+        norm, cmap = self.get_norm_cmap("epsilon-zeta")
+        d_axes[idx].imshow(data_mat, norm=norm, cmap=cmap, origin='lower', extent=self.get_extent(bottom, top))
         d_axes[idx].set_yticks([bottom, top])
         
     def set_yticks_for_epsilon_minus_zeta(self, ax, top, bottom):
@@ -298,3 +376,63 @@ class MixPlot2(MixPlot1):
         for idx in range(3, 5):
             ylabel = self.dihedral_ylabels[idx-3] + r' ($\degree$)'
             d_axes[idx].set_ylabel(ylabel, fontsize=self.lbfz)
+
+    def get_data_mat_min_max(self):
+        data_mat = self.assemble_data_mat(self.d_dihedral_df["C2prime-P"])
+        print("C2'-C3'-O3'-P")
+        print(f'Min: {data_mat.min()} Max: {data_mat.max():.3f}')
+        data_mat = self.assemble_data_mat(self.epsilon_minus_zeta_df)
+        print('epsilon - zeta:')
+        print(f'Min: {data_mat.min()} Max: {data_mat.max():.3f}')
+
+
+class MixPlot3(MixPlot1):
+    lbfz = 10
+    k_labels = ["C1'-N3/C1'-O2", "C2'-C8/C2'-C6", "O4'-O5'"]
+    dihedral_ylabels = ["O4'-C4'-C5'-O5'", "C2'-C1'-N9/N1-C8/C6", "O4'-C1'-N9/N1-C8/C6"]
+    dihedral_name_lst = ["O4prime-O5prime", "C2prime-C8orC6", "O4prime-C8orC6"]
+
+    def __init__(self, host, strand_id, big_traj_folder, dihedral_folder, backbone_data_folder, make_df=False):
+        super().__init__(host, strand_id, big_traj_folder, dihedral_folder, backbone_data_folder, make_df=make_df)
+        self.f_df = path.join(self.dihedral_folder, f'{self.host}_{self.strand_id}_k_resid_with_self.csv')
+
+    def plot_main(self, figsize, hspace, bottom, top):
+        fig = plt.figure(figsize=figsize, facecolor='white')
+        d_axes = self.get_d_axes(fig, hspace)
+        self.remove_xticks(d_axes)
+        self.set_xlabel_xticks(d_axes)
+        self.set_ylabels(d_axes)
+        for idx in range(3):
+            self.plot_k(d_axes, idx)
+            self.set_k_ylim(d_axes, idx)
+        for idx in range(3, 6):
+            self.heatmap(d_axes, idx, bottom, top)
+            self.set_yticks_for_dihedral(d_axes[idx], top, bottom)
+        self.add_resid_lines(d_axes)
+        self.set_xlim_the_same(d_axes)
+        return fig, d_axes
+
+    def ini_k_agents(self):
+        if self.s_agent is None:
+            self.s_agent = BackboneMeanModeAgent(self.host, self.big_traj_folder, self.interval_time)
+        if self.kmat_agent is None:
+            self.kmat_agent = KMat(self.s_agent)
+        if self.resid_k_agent is None:
+            self.resid_k_agent = BackboneResidPlot(self.host, self.s_agent, self.kmat_agent)
+
+    def set_f_df(self):
+        return path.join(self.dihedral_folder, f'{self.host}_{self.strand_id}_k_resid_with_self.csv')
+
+    def get_k_resid_array(self):
+        return self.resid_lst
+
+    def set_k_ylim(self, d_axes, idx):
+        d_ylim = {"C1'-N3/C1'-O2": (10.947, 30.006), "C2'-C8/C2'-C6": (5.255, 15.881), 
+                  "O4'-O5'": (3.188, 11.171)}
+        label = self.k_labels[idx]
+        d_axes[idx].set_ylim(d_ylim[label])
+        d_hlines = {"C1'-N3/C1'-O2": np.arange(15, 30.1, 5), "C2'-C8/C2'-C6": np.arange(6, 14.1, 2), 
+                    "O4'-O5'": np.arange(4, 10.1, 2)}
+        for hline in d_hlines[label]:
+            d_axes[idx].axhline(hline, color='grey', alpha=0.1)
+
